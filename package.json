@@ -1,0 +1,27 @@
+{
+  "name": "artistic-fusion-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Artistic Fusion E-Commerce Platform — Next.js 14 Storefront & Admin + Express/MongoDB/Cloudinary/Socket.io API",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"API,WEB\" -c \"yellow,magenta\" \"npm run dev --workspace=server\" \"npm run dev --workspace=client\"",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "build": "npm run build --workspace=client",
+    "start:server": "npm run start --workspace=server",
+    "start:client": "npm run start --workspace=client",
+    "seed": "npm run seed --workspace=server",
+    "seed:destroy": "npm run seed:destroy --workspace=server",
+    "lint": "npm run lint --workspace=client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

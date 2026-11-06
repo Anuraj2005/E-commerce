@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background-color: #FDF7F4;
+    color: #222222;
+  }
+
+  body {
+    @apply bg-brand-blush text-brand-charcoal font-sans antialiased selection:bg-brand-petal selection:text-brand-charcoal;
+  }
+}
+
+/* Hide scrollbars on horizontal Story Highlights & thumbnail carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
