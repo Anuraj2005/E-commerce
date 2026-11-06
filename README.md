@@ -2,28 +2,39 @@
 
 > *“something handmade is so much more beautiful”*
 
-**Artistic Fusion** is a production-ready D2C e-commerce monorepo combining the high-converting visual hierarchy of **Joker & Witch** with Artistic Fusion’s pastel handcrafted aesthetic. It features a **Next.js 14 App Router** storefront & admin studio, an **Express + Socket.io** real-time backend API, **MongoDB Atlas** persistence, and **Direct Signed Cloudinary** browser-to-CDN image uploads.
+**Artistic Fusion** is a production-ready D2C e-commerce platform combining the high-converting visual hierarchy of **Joker & Witch** with Artistic Fusion’s pastel handcrafted aesthetic. Built as a unified **Next.js 14 App Router** application, it pairs the storefront and `/admin` studio with serverless **Next.js API Routes (`/api/v1/*`)**, **Pusher Channels** for real-time broadcasts, **MongoDB Atlas** persistence, and **Direct Signed Cloudinary** browser-to-CDN image uploads.
 
 ---
 
-## 1. Architecture & Monorepo Structure
+## 1. Architecture & Project Structure
 
 ```text
-artistic-fusion-monorepo/
-├── package.json              # npm workspaces root ("client", "server") + concurrently scripts
-├── client/                   # Next.js 14 Storefront + Protected /admin Studio (Deploy -> Vercel)
-│   ├── app/                  # App Router pages (/, /collections/[slug], /products/[slug], /checkout, /admin/*)
-│   ├── components/           # AnnouncementBar, Navbar, MobileBottomNav, HeroSlider, StoryHighlights, ProductCard, CartDrawer
-│   ├── lib/                  # API client, Socket.io singleton, Direct Cloudinary uploader, Indian PIN estimator
-│   └── store/                # Zustand stores (Cart + Wishlist, Auth, Real-Time Catalog)
-└── server/                   # Node.js + Express REST API + Socket.io Server (Deploy -> Render)
-    ├── config/               # MongoDB Atlas connection & Cloudinary SDK setup
-    ├── controllers/          # Auth, Products, Categories, Signed Media, Orders, Admin Metrics, Instagram UGC
-    ├── middleware/           # Cookie + Bearer JWT authentication & RBAC (customer, staff, admin)
+artistic-fusion/
+├── package.json              # Workspace scripts for dev, build, start, lint & database seeding
+└── client/                   # Unified Next.js 14 Storefront, /admin Studio & API Routes (Deploy -> Vercel)
+    ├── app/
+    │   ├── (storefront)/     # App Router pages (/, /collections/[slug], /products/[slug], /checkout, /account)
+    │   ├── admin/            # Protected /admin Craft Studio (Analytics, Products, Orders Kanban)
+    │   └── api/
+    │       └── v1/           # Serverless Next.js Route Handlers
+    │           ├── auth/         # Login, registration, current session & logout (HttpOnly JWT cookies)
+    │           ├── products/     # Catalog CRUD, stock updates & native Next.js ISR revalidation
+    │           ├── categories/   # 7 Story Highlight categories & collection lookups
+    │           ├── media/        # Cryptographic Cloudinary upload signature endpoint
+    │           ├── orders/       # Atomic COD / Razorpay checkout & live Kanban status transitions
+    │           ├── admin/        # Storefront KPIs & revenue analytics
+    │           ├── instagram/    # Shoppable Instagram UGC lookbook feed
+    │           └── health/       # MongoDB, Cloudinary & Pusher connectivity check
+    ├── components/           # AnnouncementBar, Navbar, MobileBottomNav, HeroSlider, StoryHighlights, ProductCard, CartDrawer
+    ├── lib/                  # Cached MongoDB connector, Pusher server & client SDKs, JWT RBAC helpers, Cloudinary uploader, PIN estimator
     ├── models/               # Mongoose schemas (User, Category, Product, Order, InstagramPost)
-    ├── routes/               # /api/v1/* endpoints
-    └── seed/                 # Comprehensive catalog, 7 Story Highlights, UGC & Admin seeder
+    ├── seed/                 # Comprehensive catalog, 7 Story Highlights, UGC & Admin seeder
+    └── store/                # Zustand stores (Cart + Wishlist, Auth, Real-Time Pusher Catalog)
 ```
+
+### Why Next.js API Routes + Pusher?
+- **Single Unified Deployment**: Storefront UI, `/admin` portal, and `/api/v1/*` backend endpoints deploy together on **Vercel**—eliminating separate backend hosting on Render, cross-origin CORS complexity, and cross-server ISR webhook hops (`revalidatePath` runs natively inside API routes).
+- **Serverless-Native Real-Time Events**: Because serverless route handlers are stateless and do not hold persistent TCP sockets, **Pusher Channels** handles managed WebSocket fan-out (`pusher` server SDK triggers events from API routes; `pusher-js` subscribes in the browser) with zero free-tier cold-start spin-downs.
 
 ---
 
@@ -34,7 +45,7 @@ artistic-fusion-monorepo/
 - **Craft Customization Engine**: Preset or custom foil gift tag selector, visual satin ribbon color swatches (with custom admin color palette creation), conditional customer photo upload widget (for Albums & A5 Frames), and a rule-based 6-digit Indian PIN code delivery estimator.
 - **Amazon / Flipkart Checkout Flow**: Guests browse and customize freely across the entire site, then sign in or register inline at Step 1 of `/checkout` before placing a **Cash on Delivery (COD)** order with atomic inventory deduction.
 - **Zero-Buffer Signed Cloudinary Uploads**: Both admin product photography and customer keepsake photos upload directly from the browser to Cloudinary CDN using time-bound cryptographic signatures generated by `POST /api/v1/media/upload-signature`.
-- **Real-Time Socket.io Synchronization**: Stock adjustments or price edits in `/admin/products` and customer order placements broadcast live across open browsers in under 500ms.
+- **Real-Time Pusher Synchronization**: Stock adjustments or price edits in `/admin/products`, new customer order placements, and Kanban fulfillment updates trigger Pusher Channels events from Next.js API Routes—updating open browsers live in under 500ms.
 
 ---
 
@@ -42,35 +53,40 @@ artistic-fusion-monorepo/
 
 ### Prerequisites
 - **Node.js** `v20+` and **npm** `v10+`
-- Active **MongoDB Atlas** connection string & **Cloudinary** credentials *(Note: In local development, if `server/.env` has not been edited yet, the API automatically boots with an in-memory store pre-populated from `seedData.js` so `npm run dev` works out of the box).*
+- Active **MongoDB Atlas** connection string, **Cloudinary** credentials, and **Pusher Channels** keys *(Note: In local development, if `client/.env.local` has not been configured yet, the API can fall back to an in-memory store pre-populated from `seedData` so `npm run dev` works out of the box).*
 
 ### Step 1: Install Dependencies
-From the monorepo root folder:
+From the project root folder:
 ```bash
 npm install
 ```
 
-### Step 2: Add Your MongoDB Atlas & Cloudinary Credentials
-1. Open `server/.env` (copied from `server/.env.example`) and paste your active credentials:
-   ```env
-   PORT=5000
-   NODE_ENV=development
-   MONGODB_URI=mongodb+srv://<your_user>:<your_password>@<your_cluster>.mongodb.net/artistic_fusion?retryWrites=true&w=majority
-   JWT_SECRET=replace_with_a_strong_random_64_char_secret
-   JWT_EXPIRES_IN=7d
-   CLOUDINARY_CLOUD_NAME=your_actual_cloud_name
-   CLOUDINARY_API_KEY=your_actual_api_key
-   CLOUDINARY_API_SECRET=your_actual_api_secret
-   CLIENT_URL=http://localhost:3000
-   REVALIDATION_SECRET=artistic_fusion_isr_secret_token
-   ```
-2. Check `client/.env.local` (copied from `client/.env.local.example`):
-   ```env
-   NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
-   NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
-   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_actual_cloud_name
-   REVALIDATION_SECRET=artistic_fusion_isr_secret_token
-   ```
+### Step 2: Add Your MongoDB Atlas, Cloudinary & Pusher Credentials
+Open `client/.env.local` (copied from `client/.env.local.example`) and paste your active credentials:
+```env
+# Database & Authentication (Server-Only)
+NODE_ENV=development
+MONGODB_URI=mongodb+srv://<your_user>:<your_password>@<your_cluster>.mongodb.net/artistic_fusion?retryWrites=true&w=majority
+JWT_SECRET=replace_with_a_strong_random_64_char_secret
+JWT_EXPIRES_IN=7d
+
+# Cloudinary Signed Uploads
+CLOUDINARY_CLOUD_NAME=your_actual_cloud_name
+CLOUDINARY_API_KEY=your_actual_api_key
+CLOUDINARY_API_SECRET=your_actual_api_secret
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_actual_cloud_name
+
+# Pusher Channels (Real-Time WebSocket Events)
+PUSHER_APP_ID=your_pusher_app_id
+PUSHER_KEY=your_pusher_key
+PUSHER_SECRET=your_pusher_secret
+PUSHER_CLUSTER=ap2
+NEXT_PUBLIC_PUSHER_KEY=your_pusher_key
+NEXT_PUBLIC_PUSHER_CLUSTER=ap2
+
+# Same-Origin Next.js API Base Path
+NEXT_PUBLIC_API_URL=/api/v1
+```
 
 ### Step 3: Seed Your MongoDB Atlas Database
 Populate the default Administrator account, Demo Customer, 7 Story Highlight Categories, 12 Handcrafted Products (with dual hover-flip imagery), 6 Shoppable Instagram Posts, and sample Kanban orders:
@@ -79,13 +95,13 @@ npm run seed
 ```
 *(To wipe seeded collections later, run `npm run seed:destroy`.)*
 
-### Step 4: Start the Full-Stack Environment (Single Command)
+### Step 4: Start the Full-Stack Next.js Environment
 ```bash
 npm run dev
 ```
 - **Storefront**: http://localhost:3000
 - **Admin Craft Studio**: http://localhost:3000/admin
-- **Backend API & Health Check**: http://localhost:5000/api/v1/health
+- **Next.js API & Health Check**: http://localhost:3000/api/v1/health
 
 ### Default Test Accounts
 | Role | Email | Password | Portal |
@@ -97,16 +113,16 @@ npm run dev
 
 ## 4. Step-by-Step Production Deployment Guide
 
-The production architecture deploys **Backend API + Socket.io** to **Render** and **Next.js Storefront + Admin** to **Vercel**, backed by **MongoDB Atlas** and **Cloudinary CDN**.
+The production architecture deploys the unified **Next.js Storefront, Admin Studio, and API Routes (`/api/v1/*`)** on **Vercel**, backed by **Pusher Channels** for real-time WebSockets, **MongoDB Atlas** for persistence, and **Cloudinary CDN** for media.
 
 ---
 
-### Step 1: Push Monorepo to GitHub
-1. Initialize a Git repository in the monorepo root (`.gitignore` already excludes `node_modules/`, `.next/`, and `.env` files):
+### Step 1: Push Project to GitHub
+1. Initialize a Git repository in the project root (`.gitignore` already excludes `node_modules/`, `.next/`, and `.env*` files):
    ```bash
    git init
    git add .
-   git commit -m "feat: Artistic Fusion full-stack e-commerce platform"
+   git commit -m "feat: Artistic Fusion full-stack Next.js + Pusher e-commerce platform"
    ```
 2. Create a new private or public repository on **GitHub** and push your `main` branch:
    ```bash
@@ -117,15 +133,15 @@ The production architecture deploys **Backend API + Socket.io** to **Render** an
 
 ---
 
-### Step 2: Prepare MongoDB Atlas for Cloud Access
+### Step 2: Prepare MongoDB Atlas for Serverless Access
 1. Sign in to [MongoDB Atlas](https://cloud.mongodb.com/).
 2. Navigate to **Database Access** → ensure your database user has **Read and write to any database** privileges and note the password (URL-encode special characters like `@` as `%40` if present).
-3. Navigate to **Network Access** → click **Add IP Address** → choose **Allow Access from Anywhere (`0.0.0.0/0`)** so Render’s dynamic outbound IPs can connect.
+3. Navigate to **Network Access** → click **Add IP Address** → choose **Allow Access from Anywhere (`0.0.0.0/0`)** (or link via the official Vercel–MongoDB Atlas integration) so Vercel Serverless Functions can connect across dynamic outbound IPs.
 4. Click **Connect → Drivers** on your cluster and copy your connection string:
    ```text
    mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/artistic_fusion?retryWrites=true&w=majority
    ```
-5. If you have not seeded your Atlas database yet, paste that `MONGODB_URI` into your local `server/.env` and run `npm run seed` once from your machine to populate all initial categories, products, highlights, and the admin user. *(Immediately change the default admin password in production if desired!)*
+5. If you have not seeded your Atlas database yet, paste that `MONGODB_URI` into your local `client/.env.local` and run `npm run seed` once from your machine to populate all initial categories, products, highlights, and the admin user. *(Immediately change the default admin password in production if desired!)*
 
 ---
 
@@ -135,97 +151,77 @@ The production architecture deploys **Backend API + Socket.io** to **Render** an
    - **Cloud Name** (`CLOUDINARY_CLOUD_NAME`)
    - **API Key** (`CLOUDINARY_API_KEY`)
    - **API Secret** (`CLOUDINARY_API_SECRET`)
-3. No unsigned upload preset is required because the backend cryptographically signs uploads via `POST /api/v1/media/upload-signature` into `artistic_fusion/products` and `artistic_fusion/customer_uploads`.
+3. No unsigned upload preset is required because the Next.js Route Handler cryptographically signs uploads via `POST /api/v1/media/upload-signature` into `artistic_fusion/products` and `artistic_fusion/customer_uploads`.
 
 ---
 
-### Step 4: Deploy Backend API & Socket.io Server on Render
-1. Sign in to [Render](https://dashboard.render.com/) and click **New + → Web Service**.
-2. Connect your GitHub repository (`artistic-fusion`).
-3. Configure the service settings carefully:
-   - **Name**: `artistic-fusion-api`
-   - **Region**: Singapore (closest low-latency region for India) or Oregon
-   - **Branch**: `main`
-   - **Root Directory**: `server`
-   - **Runtime**: `Node`
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
-4. Scroll to **Advanced → Health Check Path** and enter:
-   ```text
-   /api/v1/health
-   ```
-5. Add the following **Environment Variables** in Render:
+### Step 4: Set Up Pusher Channels for Real-Time Sync
+1. Sign in to the [Pusher Dashboard](https://dashboard.pusher.com/) and click **Channels → Create app**.
+2. Configure your Channels app:
+   - **Name**: `artistic-fusion-prod`
+   - **Cluster**: `ap2 (Asia Pacific - Mumbai)` *(recommended for lowest latency across India)*
+   - **Frontend / Backend**: `React` / `Node.js`
+3. Open **App Keys** in the left sidebar and copy:
+   - `app_id` → `PUSHER_APP_ID`
+   - `key` → `PUSHER_KEY` and `NEXT_PUBLIC_PUSHER_KEY`
+   - `secret` → `PUSHER_SECRET`
+   - `cluster` → `PUSHER_CLUSTER` and `NEXT_PUBLIC_PUSHER_CLUSTER` (e.g., `ap2`)
+
+---
+
+### Step 5: Deploy Full-Stack Next.js App & API Routes on Vercel
+1. Sign in to [Vercel](https://vercel.com/new) and click **Add New → Project**.
+2. Import your `artistic-fusion` GitHub repository.
+3. Configure the Vercel project settings:
+   - **Framework Preset**: `Next.js`
+   - **Root Directory**: Click **Edit** and select `client` *(Important if deploying from the workspace root)*
+   - **Functions Region**: Select **Mumbai, India (`bom1`)** under Project Settings → Functions so Next.js API Routes execute close to your MongoDB Atlas cluster and Indian shoppers.
+   - **Build Command**: `npm run build` *(default)*
+   - **Output Directory**: `.next` *(default)*
+4. Expand **Environment Variables** and add all server and client keys in one place:
 
    | Key | Value |
    |---|---|
-   | `NODE_ENV` | `production` |
-   | `PORT` | `5000` |
    | `MONGODB_URI` | `mongodb+srv://<user>:<pass>@cluster0.xxx.mongodb.net/artistic_fusion?retryWrites=true&w=majority` |
    | `JWT_SECRET` | *(Generate a strong 64-character random string)* |
    | `JWT_EXPIRES_IN` | `7d` |
    | `CLOUDINARY_CLOUD_NAME` | `<your_cloudinary_cloud_name>` |
    | `CLOUDINARY_API_KEY` | `<your_cloudinary_api_key>` |
    | `CLOUDINARY_API_SECRET` | `<your_cloudinary_api_secret>` |
-   | `CLIENT_URL` | `https://artistic-fusion.vercel.app` *(Update in Step 5 once Vercel gives your exact domain)* |
-   | `ALLOW_VERCEL_PREVIEWS` | `true` *(Optional: allows Vercel branch preview URLs during QA)* |
-   | `REVALIDATION_SECRET` | *(Generate a shared secret token, e.g. `af_isr_prod_981273`)* |
+   | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | `<your_cloudinary_cloud_name>` |
+   | `PUSHER_APP_ID` | `<your_pusher_app_id>` |
+   | `PUSHER_KEY` | `<your_pusher_key>` |
+   | `PUSHER_SECRET` | `<your_pusher_secret>` |
+   | `PUSHER_CLUSTER` | `ap2` |
+   | `NEXT_PUBLIC_PUSHER_KEY` | `<your_pusher_key>` |
+   | `NEXT_PUBLIC_PUSHER_CLUSTER` | `ap2` |
+   | `NEXT_PUBLIC_API_URL` | `/api/v1` |
 
-6. Click **Create Web Service**. Wait ~2 minutes for Render to build and start.
-7. Copy your live Render URL (e.g., `https://artistic-fusion-api.onrender.com`) and open `https://artistic-fusion-api.onrender.com/api/v1/health` in your browser. Verify it responds with:
+5. Click **Deploy**. Once finished, Vercel will assign your production URL (e.g., `https://artistic-fusion.vercel.app` or your custom domain `https://www.artisticfusion.in`).
+6. Open `https://artistic-fusion.vercel.app/api/v1/health` in your browser and verify your serverless API responds with:
    ```json
    {
      "success": true,
      "status": "ok",
      "database": "mongodb-atlas",
-     "cloudinary": "configured"
+     "cloudinary": "configured",
+     "realtime": "pusher"
    }
    ```
 
 ---
 
-### Step 5: Deploy Next.js Storefront & Admin Portal on Vercel
-1. Sign in to [Vercel](https://vercel.com/new) and click **Add New → Project**.
-2. Import the same `artistic-fusion` GitHub repository.
-3. Configure the Vercel project settings:
-   - **Framework Preset**: `Next.js`
-   - **Root Directory**: Click **Edit** and select `client` *(Important!)*
-   - **Build Command**: `npm run build` *(default)*
-   - **Output Directory**: `.next` *(default)*
-4. Expand **Environment Variables** and add:
-
-   | Key | Value |
-   |---|---|
-   | `NEXT_PUBLIC_API_URL` | `https://artistic-fusion-api.onrender.com/api/v1` *(Note the `/api/v1` suffix)* |
-   | `NEXT_PUBLIC_SOCKET_URL` | `https://artistic-fusion-api.onrender.com` *(No trailing slash or `/api/v1`)* |
-   | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | `<your_cloudinary_cloud_name>` |
-   | `REVALIDATION_SECRET` | *(Exact same `REVALIDATION_SECRET` value set on Render)* |
-
-5. Click **Deploy**. Once finished, Vercel will assign your production URL (e.g., `https://artistic-fusion.vercel.app` or your custom domain `https://www.artisticfusion.in`).
-6. **Final CORS Link**: Return to **Render → Environment**, set `CLIENT_URL` to your exact Vercel URL (without a trailing slash, e.g. `https://artistic-fusion.vercel.app`), and save so Render restarts cleanly with strict CORS protection.
-
----
-
-### Step 6: Prevent Render Free-Tier Cold Starts (Recommended)
-If using Render’s free plan, Render spins down idle instances after 15 minutes of inactivity.
-1. Create a free account on [UptimeRobot](https://uptimerobot.com/) or [cron-job.org](https://cron-job.org/).
-2. Add an `HTTPS` monitor pointing to:
-   ```text
-   https://artistic-fusion-api.onrender.com/api/v1/health
-   ```
-3. Set the ping interval to **every 10 minutes**. Your API and WebSocket server will stay warm 24/7.
-
----
-
-### Step 7: Enabling Live Razorpay Payments (When Moving Beyond COD)
+### Step 6: Enabling Live Razorpay Payments (When Moving Beyond COD)
 The checkout and `Order` schema natively include `RAZORPAY` fields (`razorpayOrderId`, `razorpayPaymentId`, `paymentStatus: 'PAID'`). When you are ready to enable live UPI, Cards, and NetBanking in INR:
 1. Create a merchant account at [Razorpay Dashboard](https://dashboard.razorpay.com/) and generate **API Keys** (`Key ID` & `Key Secret`).
-2. Add `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` to **Render Environment Variables**, and `NEXT_PUBLIC_RAZORPAY_KEY_ID` to **Vercel Environment Variables**.
+2. Add `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `NEXT_PUBLIC_RAZORPAY_KEY_ID` to **Vercel Environment Variables** and redeploy.
 3. Load `https://checkout.razorpay.com/v1/checkout.js` in `/checkout` to exchange a Razorpay order signature before invoking `POST /api/v1/orders` with `paymentMethod: 'RAZORPAY'`.
 
 ---
 
 ## 5. Post-Deployment Verification Checklist
 - [ ] **Storefront Parity**: Open `/` on desktop and mobile; verify Announcement Bar rotation, 7 Story Highlights, 4:5 hover-flip Product Cards, and Mobile Bottom Navigation.
+- [ ] **Serverless API Health**: Visit `/api/v1/health` on your Vercel URL and confirm `database`, `cloudinary`, and `realtime` all report healthy status.
 - [ ] **Direct Cloudinary Upload**: Log into `/admin/products/new` (`admin@artisticfusion.com`), upload two product photos, and confirm in browser DevTools Network tab that image binaries post directly to `https://api.cloudinary.com/v1_1/<cloud_name>/image/upload`.
-- [ ] **Real-Time Stock Sync**: Open a product page in one browser window and `/admin/products` in another; click `+` or `-` on stock in Admin and confirm the storefront updates immediately without page refresh.
+- [ ] **Real-Time Pusher Stock Sync**: Open a product page in one browser window and `/admin/products` in another; click `+` or `-` on stock in Admin and confirm the storefront updates immediately via Pusher Channels (visible in Pusher Debug Console) without page refresh.
 - [ ] **End-to-End COD Order & Kanban**: Add a customized hamper to your bag, proceed to `/checkout`, place a Cash on Delivery order, and advance the order from `RECEIVED` → `HANDCRAFTING` → `SHIPPED` in `/admin/orders` while watching the customer Order Confirmation tracker update live.
