@@ -146,7 +146,7 @@ export default function CartPage() {
 
         {/* Summary Column */}
         <div className="lg:col-span-4">
-          <div className="bg-white border border-brand-border p-6 space-y-4 sticky top-28">
+          <div className="bg-white border border-brand-border p-6 space-y-4 sticky top-40">
             <h2 className="font-serif uppercase tracking-widest text-sm font-semibold text-brand-charcoal pb-3 border-b border-brand-border">
               Order Summary
             </h2>

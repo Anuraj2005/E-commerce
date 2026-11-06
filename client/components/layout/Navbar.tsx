@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Search,
   Heart,
@@ -21,6 +22,7 @@ import { useCatalogStore } from '@/store/useCatalogStore';
 import { formatINR } from '@/lib/format';
 
 export default function Navbar() {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
@@ -64,153 +66,59 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-brand-canvas/95 backdrop-blur-md border-b border-brand-border">
+      <header className="relative bg-brand-canvas/95 backdrop-blur-md border-b border-brand-border">
+        {/* Top Row: Left Quick Search / Mobile Menu | Center Brand Crest | Right Utility Icons */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-3 items-center min-h-[5rem] md:min-h-[6rem] py-2.5">
-            {/* Left Navigation Links (Desktop) & Hamburger (Mobile) */}
-            <div className="flex items-center">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center h-16 md:h-[68px] gap-3 sm:gap-6">
+            {/* Left Cell: Hamburger (Mobile) & Quick Search Pill (Desktop) */}
+            <div className="flex items-center justify-start min-w-0">
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Open navigation menu"
-                className="lg:hidden p-2 -ml-2 text-brand-charcoal hover:text-brand-gold transition-colors"
+                className="md:hidden p-2 -ml-2 text-brand-charcoal hover:text-brand-gold transition-colors"
               >
                 <Menu className="w-6 h-6" />
               </button>
 
-              <nav className="hidden lg:flex items-center space-x-6 text-xs font-medium uppercase tracking-widest text-brand-charcoal">
-                <Link
-                  href="/collections/all?badge=NEW"
-                  className="relative flex items-center gap-1.5 hover:text-brand-crimson transition-colors py-2"
-                >
-                  <span>New In</span>
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-crimson opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-crimson" />
-                  </span>
-                </Link>
-
-                {/* Hampers Dropdown */}
-                <div className="relative group py-2">
-                  <Link
-                    href="/collections/hampers"
-                    className="flex items-center gap-1 hover:text-brand-gold transition-colors"
-                  >
-                    <span>Hampers</span>
-                    <ChevronDown className="w-3.5 h-3.5 opacity-70 group-hover:rotate-180 transition-transform" />
-                  </Link>
-                  <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 absolute left-0 top-full pt-2 w-56 z-50">
-                    <div className="bg-white border border-brand-border shadow-xl rounded-sm py-2.5 px-4 space-y-2 text-[11px]">
-                      <Link
-                        href="/collections/celebration-hampers"
-                        className="block py-1.5 hover:text-brand-crimson transition-colors"
-                      >
-                        Celebration Hampers
-                      </Link>
-                      <Link
-                        href="/collections/hampers"
-                        className="block py-1.5 hover:text-brand-crimson transition-colors"
-                      >
-                        Curated Gift Boxes
-                      </Link>
-                      <Link
-                        href="/collections/all?badge=BESTSELLER"
-                        className="block py-1.5 hover:text-brand-crimson transition-colors"
-                      >
-                        Festive & Bestseller Sets
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Keepsakes Dropdown */}
-                <div className="relative group py-2">
-                  <Link
-                    href="/collections/albums"
-                    className="flex items-center gap-1 hover:text-brand-gold transition-colors"
-                  >
-                    <span>Keepsakes</span>
-                    <ChevronDown className="w-3.5 h-3.5 opacity-70 group-hover:rotate-180 transition-transform" />
-                  </Link>
-                  <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 absolute left-0 top-full pt-2 w-52 z-50">
-                    <div className="bg-white border border-brand-border shadow-xl rounded-sm py-2.5 px-4 space-y-2 text-[11px]">
-                      <Link
-                        href="/collections/albums"
-                        className="block py-1.5 hover:text-brand-crimson transition-colors"
-                      >
-                        Handcrafted Albums
-                      </Link>
-                      <Link
-                        href="/collections/a5-frames"
-                        className="block py-1.5 hover:text-brand-crimson transition-colors"
-                      >
-                        A5 Custom Frames
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-
-                <Link
-                  href="/collections/bouquets"
-                  className="hover:text-brand-gold transition-colors py-2"
-                >
-                  Bouquets
-                </Link>
-
-                {/* Occasions Dropdown */}
-                <div className="relative group py-2">
-                  <Link
-                    href="/collections/event-decor"
-                    className="flex items-center gap-1 hover:text-brand-gold transition-colors"
-                  >
-                    <span>Occasions</span>
-                    <ChevronDown className="w-3.5 h-3.5 opacity-70 group-hover:rotate-180 transition-transform" />
-                  </Link>
-                  <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 absolute left-0 top-full pt-2 w-52 z-50">
-                    <div className="bg-white border border-brand-border shadow-xl rounded-sm py-2.5 px-4 space-y-2 text-[11px]">
-                      <Link
-                        href="/collections/event-decor"
-                        className="block py-1.5 hover:text-brand-crimson transition-colors"
-                      >
-                        Event Décor
-                      </Link>
-                      <Link
-                        href="/collections/invitation-cards"
-                        className="block py-1.5 hover:text-brand-crimson transition-colors"
-                      >
-                        Invitation Cards
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </nav>
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                aria-label="Search crafts"
+                className="hidden md:inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-brand-border bg-brand-surface/80 hover:border-brand-gold text-xs text-brand-muted hover:text-brand-charcoal transition-colors"
+              >
+                <Search className="w-3.5 h-3.5 text-brand-gold shrink-0" />
+                <span className="whitespace-nowrap">
+                  Search <span className="hidden lg:inline">hampers, albums...</span>
+                </span>
+              </button>
             </div>
 
-            {/* Center Brand Identity */}
-            <div className="flex flex-col items-center justify-center text-center">
-              <Link href="/" className="group flex flex-col items-center">
-                <div className="flex items-center gap-2">
-                  <span className="hidden sm:inline-flex w-7 h-7 rounded-full bg-brand-blush border border-brand-gold/60 items-center justify-center text-brand-gold">
+            {/* Center Cell: Unobstructed Symmetrical Brand Identity */}
+            <div className="flex flex-col items-center justify-center text-center shrink-0">
+              <Link href="/" className="group flex flex-col items-center justify-center">
+                <div className="flex items-center gap-2 whitespace-nowrap">
+                  <span className="hidden sm:inline-flex w-6 h-6 md:w-7 md:h-7 rounded-full bg-brand-blush border border-brand-gold/60 items-center justify-center text-brand-gold shrink-0">
                     <Sparkles className="w-3.5 h-3.5" />
                   </span>
-                  <span className="font-serif text-lg sm:text-2xl md:text-[26px] tracking-[0.2em] text-brand-charcoal uppercase font-medium">
+                  <span className="font-serif text-base sm:text-xl md:text-2xl lg:text-[25px] tracking-[0.18em] text-brand-charcoal uppercase font-medium leading-none whitespace-nowrap">
                     Artistic Fusion
                   </span>
                 </div>
-                <span className="font-serif italic text-[11px] sm:text-xs md:text-sm text-brand-gold mt-0.5 leading-tight hidden xs:block sm:block">
+                <span className="font-serif italic text-[10px] sm:text-xs text-brand-gold mt-1 leading-none whitespace-nowrap">
                   something handmade is so much more beautiful
                 </span>
               </Link>
             </div>
 
-            {/* Right Utility Suite */}
-            <div className="flex items-center justify-end space-x-2 sm:space-x-4">
-              {/* Search Trigger */}
+            {/* Right Cell: Utility Icons */}
+            <div className="flex items-center justify-end gap-1 sm:gap-3 min-w-0">
+              {/* Mobile Search Trigger */}
               <button
                 type="button"
                 onClick={() => setSearchOpen(true)}
                 aria-label="Search crafts"
-                className="p-2 text-brand-charcoal hover:text-brand-gold transition-colors"
+                className="md:hidden p-2 text-brand-charcoal hover:text-brand-gold transition-colors"
               >
                 <Search className="w-5 h-5" />
               </button>
@@ -316,11 +224,148 @@ export default function Navbar() {
             </div>
           </div>
         </div>
+
+        {/* Desktop Category Navigation Bar (Centered, Single-Line, Never Overlaps Brand) */}
+        <div className="hidden md:block border-t border-brand-border/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav
+              aria-label="Primary categories"
+              className="flex items-center justify-center gap-6 lg:gap-10 h-11 text-[11px] lg:text-xs font-medium uppercase tracking-[0.16em] text-brand-charcoal"
+            >
+              <Link
+                href="/collections/all?badge=NEW"
+                className="relative inline-flex items-center gap-1.5 h-full whitespace-nowrap leading-none hover:text-brand-crimson transition-colors"
+              >
+                <span>New In</span>
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-crimson opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-crimson" />
+                </span>
+              </Link>
+
+              {/* Hampers Dropdown */}
+              <div className="relative group h-full flex items-center">
+                <Link
+                  href="/collections/hampers"
+                  className={`inline-flex items-center gap-1 h-full whitespace-nowrap leading-none hover:text-brand-gold transition-colors ${
+                    pathname?.includes('/hampers') ? 'text-brand-crimson font-semibold' : ''
+                  }`}
+                >
+                  <span>Hampers</span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-70 group-hover:rotate-180 transition-transform shrink-0" />
+                </Link>
+                <div className="invisible opacity-0 translate-y-1 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 absolute left-1/2 -translate-x-1/2 top-full pt-1 w-56 z-50">
+                  <div className="bg-white border border-brand-border shadow-xl rounded-sm py-2.5 px-4 space-y-2 text-[11px] tracking-wider">
+                    <Link
+                      href="/collections/celebration-hampers"
+                      className="block py-1.5 whitespace-nowrap hover:text-brand-crimson transition-colors"
+                    >
+                      Celebration Hampers
+                    </Link>
+                    <Link
+                      href="/collections/hampers"
+                      className="block py-1.5 whitespace-nowrap hover:text-brand-crimson transition-colors"
+                    >
+                      Curated Gift Boxes
+                    </Link>
+                    <Link
+                      href="/collections/all?badge=BESTSELLER"
+                      className="block py-1.5 whitespace-nowrap hover:text-brand-crimson transition-colors"
+                    >
+                      Festive & Bestseller Sets
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              {/* Keepsakes Dropdown */}
+              <div className="relative group h-full flex items-center">
+                <Link
+                  href="/collections/albums"
+                  className={`inline-flex items-center gap-1 h-full whitespace-nowrap leading-none hover:text-brand-gold transition-colors ${
+                    pathname === '/collections/albums' || pathname === '/collections/a5-frames'
+                      ? 'text-brand-crimson font-semibold'
+                      : ''
+                  }`}
+                >
+                  <span>Keepsakes</span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-70 group-hover:rotate-180 transition-transform shrink-0" />
+                </Link>
+                <div className="invisible opacity-0 translate-y-1 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 absolute left-1/2 -translate-x-1/2 top-full pt-1 w-52 z-50">
+                  <div className="bg-white border border-brand-border shadow-xl rounded-sm py-2.5 px-4 space-y-2 text-[11px] tracking-wider">
+                    <Link
+                      href="/collections/albums"
+                      className="block py-1.5 whitespace-nowrap hover:text-brand-crimson transition-colors"
+                    >
+                      Handcrafted Albums
+                    </Link>
+                    <Link
+                      href="/collections/a5-frames"
+                      className="block py-1.5 whitespace-nowrap hover:text-brand-crimson transition-colors"
+                    >
+                      A5 Custom Frames
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              <Link
+                href="/collections/bouquets"
+                className={`inline-flex items-center h-full whitespace-nowrap leading-none hover:text-brand-gold transition-colors ${
+                  pathname === '/collections/bouquets' ? 'text-brand-crimson font-semibold' : ''
+                }`}
+              >
+                Bouquets
+              </Link>
+
+              {/* Occasions Dropdown */}
+              <div className="relative group h-full flex items-center">
+                <Link
+                  href="/collections/event-decor"
+                  className={`inline-flex items-center gap-1 h-full whitespace-nowrap leading-none hover:text-brand-gold transition-colors ${
+                    pathname === '/collections/event-decor' ||
+                    pathname === '/collections/invitation-cards'
+                      ? 'text-brand-crimson font-semibold'
+                      : ''
+                  }`}
+                >
+                  <span>Occasions</span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-70 group-hover:rotate-180 transition-transform shrink-0" />
+                </Link>
+                <div className="invisible opacity-0 translate-y-1 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 absolute left-1/2 -translate-x-1/2 top-full pt-1 w-52 z-50">
+                  <div className="bg-white border border-brand-border shadow-xl rounded-sm py-2.5 px-4 space-y-2 text-[11px] tracking-wider">
+                    <Link
+                      href="/collections/event-decor"
+                      className="block py-1.5 whitespace-nowrap hover:text-brand-crimson transition-colors"
+                    >
+                      Event Décor
+                    </Link>
+                    <Link
+                      href="/collections/invitation-cards"
+                      className="block py-1.5 whitespace-nowrap hover:text-brand-crimson transition-colors"
+                    >
+                      Invitation Cards
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              <Link
+                href="/collections/all"
+                className={`inline-flex items-center h-full whitespace-nowrap leading-none hover:text-brand-gold transition-colors ${
+                  pathname === '/collections/all' ? 'text-brand-crimson font-semibold' : ''
+                }`}
+              >
+                All Crafts
+              </Link>
+            </nav>
+          </div>
+        </div>
       </header>
 
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
+        <div className="fixed inset-0 z-50 md:hidden flex">
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-xs"
             onClick={() => setMobileMenuOpen(false)}

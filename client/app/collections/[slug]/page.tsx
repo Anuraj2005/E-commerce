@@ -222,7 +222,7 @@ function CollectionContent() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Desktop Filter Sidebar */}
-          <aside className="hidden lg:block lg:col-span-1 bg-white p-6 border border-brand-border h-fit sticky top-28">
+          <aside className="hidden lg:block lg:col-span-1 bg-white p-6 border border-brand-border h-fit sticky top-40">
             {FilterControls}
           </aside>
 

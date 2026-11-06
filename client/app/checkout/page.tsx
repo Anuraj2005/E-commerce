@@ -561,7 +561,7 @@ export default function CheckoutPage() {
 
         {/* Right Summary Column */}
         <div className="lg:col-span-5">
-          <div className="bg-white border border-brand-border p-6 space-y-5 sticky top-28">
+          <div className="bg-white border border-brand-border p-6 space-y-5 sticky top-40">
             <h2 className="font-serif uppercase tracking-widest text-sm font-semibold text-brand-charcoal pb-3 border-b border-brand-border">
               Craft Bag Summary ({items.reduce((s, i) => s + i.quantity, 0)} Items)
             </h2>
