@@ -88,6 +88,8 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
     trackingCode: { type: String, default: null },
+    requestedDeliveryDate: { type: String, default: '' },
+    estimatedDeliveryWindow: { type: String, default: '' },
   },
   {
     timestamps: true,

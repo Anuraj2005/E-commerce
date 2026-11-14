@@ -11,6 +11,7 @@ import {
   Home,
   Scissors,
   Gift,
+  Calendar,
 } from 'lucide-react';
 import { Order, FulfillmentStatus } from '@/types';
 import { apiRequest } from '@/lib/api';
@@ -156,6 +157,33 @@ export default function OrderSuccessPage() {
           </div>
         )}
 
+        {(order.requestedDeliveryDate || order.estimatedDeliveryWindow) && (
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-brand-surface border border-brand-border text-xs">
+            {order.requestedDeliveryDate && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-brand-muted flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-brand-gold" />
+                  <span>Needed By (Customer Date)</span>
+                </p>
+                <p className="font-semibold text-brand-charcoal mt-0.5">
+                  {order.requestedDeliveryDate}
+                </p>
+              </div>
+            )}
+            {order.estimatedDeliveryWindow && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-brand-muted flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-brand-gold" />
+                  <span>Estimated Delivery Window</span>
+                </p>
+                <p className="font-bold text-emerald-700 mt-0.5">
+                  {order.estimatedDeliveryWindow}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {order.trackingCode && (
           <div className="mt-6 p-3.5 bg-brand-surface border border-brand-border text-xs flex items-center justify-between">
             <span className="text-brand-muted">Courier AWB / Tracking Reference:</span>
@@ -227,6 +255,17 @@ export default function OrderSuccessPage() {
                 {order.shippingAddress.pincode}
               </p>
               <p>Phone: {order.customer.phone}</p>
+              {order.requestedDeliveryDate && (
+                <p className="pt-1.5 text-brand-charcoal">
+                  Needed By: <strong className="font-semibold">{order.requestedDeliveryDate}</strong>
+                </p>
+              )}
+              {order.estimatedDeliveryWindow && (
+                <p className="text-emerald-700">
+                  Est. Delivery:{' '}
+                  <strong className="font-semibold">{order.estimatedDeliveryWindow}</strong>
+                </p>
+              )}
             </div>
           </div>
 

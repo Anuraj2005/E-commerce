@@ -150,6 +150,8 @@ export interface Order {
   paymentStatus: PaymentStatus;
   fulfillmentStatus: FulfillmentStatus;
   trackingCode?: string | null;
+  requestedDeliveryDate?: string;
+  estimatedDeliveryWindow?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -10,6 +10,9 @@ import {
   Banknote,
   CreditCard,
   ShieldCheck,
+  Calendar,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
@@ -19,7 +22,12 @@ import {
 } from '@/store/useCartStore';
 import { apiRequest } from '@/lib/api';
 import { formatINR } from '@/lib/format';
-import { estimateIndianPincodeDelivery } from '@/lib/pincodeEstimator';
+import {
+  addDaysToLocalDate,
+  estimateIndianPincodeDelivery,
+  evaluateRequestedDeliveryDate,
+  toLocalISODate,
+} from '@/lib/pincodeEstimator';
 import { Order } from '@/types';
 
 const INDIAN_STATES = [
@@ -77,10 +85,21 @@ export default function CheckoutPage() {
   const [stateName, setStateName] = useState('Karnataka');
   const [pincode, setPincode] = useState('');
 
+  // Delivery Needed-By Date state (Date, Day & Month)
+  const [todayDate, setTodayDate] = useState<Date | null>(null);
+  const [requestedDateISO, setRequestedDateISO] = useState<string>('');
+
   // Step 3 Payment state
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'MOCK_ONLINE'>('COD');
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const now = new Date();
+    const base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    setTodayDate(base);
+    setRequestedDateISO((prev) => prev || toLocalISODate(addDaysToLocalDate(base, 5)));
+  }, []);
 
   // Pre-fill customer & saved address whenever user logs in or registers
   useEffect(() => {
@@ -105,6 +124,88 @@ export default function CheckoutPage() {
 
   const livePincodeEstimate =
     pincode.length === 6 ? estimateIndianPincodeDelivery(pincode, 2) : null;
+
+  const tomorrowDate = useMemo(
+    () => (todayDate ? addDaysToLocalDate(todayDate, 1) : null),
+    [todayDate]
+  );
+  const tomorrowISO = tomorrowDate ? toLocalISODate(tomorrowDate) : '';
+
+  const monthOptions = useMemo(() => {
+    if (!todayDate) return [];
+    const fmt = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' });
+    return Array.from({ length: 6 }, (_, idx) => {
+      const d = new Date(todayDate.getFullYear(), todayDate.getMonth() + idx, 1);
+      const y = d.getFullYear();
+      const m = d.getMonth() + 1;
+      return {
+        value: `${y}-${String(m).padStart(2, '0')}`,
+        label: fmt.format(d),
+        year: y,
+        month: m,
+      };
+    });
+  }, [todayDate]);
+
+  const parsedSelected = useMemo(() => {
+    const parts = requestedDateISO.split('-').map(Number);
+    if (parts.length === 3 && parts.every((n) => !Number.isNaN(n))) {
+      return { year: parts[0], month: parts[1], day: parts[2] };
+    }
+    if (tomorrowDate) {
+      return {
+        year: tomorrowDate.getFullYear(),
+        month: tomorrowDate.getMonth() + 1,
+        day: tomorrowDate.getDate(),
+      };
+    }
+    return null;
+  }, [requestedDateISO, tomorrowDate]);
+
+  const dayOptions = useMemo(() => {
+    if (!parsedSelected || !tomorrowDate) return [];
+    const daysInMonth = new Date(parsedSelected.year, parsedSelected.month, 0).getDate();
+    const weekdayFmt = new Intl.DateTimeFormat('en-IN', { weekday: 'short' });
+    return Array.from({ length: daysInMonth }, (_, idx) => {
+      const dayNum = idx + 1;
+      const dt = new Date(parsedSelected.year, parsedSelected.month - 1, dayNum);
+      const isPastOrToday = dt.getTime() < tomorrowDate.getTime();
+      return {
+        day: dayNum,
+        weekdayShort: weekdayFmt.format(dt),
+        disabled: isPastOrToday,
+      };
+    });
+  }, [parsedSelected, tomorrowDate]);
+
+  const handleMonthSelect = (yearMonth: string) => {
+    if (!parsedSelected || !tomorrowDate) return;
+    const [y, m] = yearMonth.split('-').map(Number);
+    const maxDay = new Date(y, m, 0).getDate();
+    const clampedDay = Math.min(parsedSelected.day, maxDay);
+    let candidate = new Date(y, m - 1, clampedDay);
+    if (candidate.getTime() < tomorrowDate.getTime()) {
+      candidate = tomorrowDate;
+    }
+    setRequestedDateISO(toLocalISODate(candidate));
+  };
+
+  const handleDaySelect = (dayStr: string) => {
+    if (!parsedSelected) return;
+    const dayNum = Number(dayStr);
+    const candidate = new Date(parsedSelected.year, parsedSelected.month - 1, dayNum);
+    setRequestedDateISO(toLocalISODate(candidate));
+  };
+
+  const handleQuickPresetDays = (daysFromToday: number) => {
+    if (!todayDate) return;
+    setRequestedDateISO(toLocalISODate(addDaysToLocalDate(todayDate, daysFromToday)));
+  };
+
+  const deliverySchedule = useMemo(
+    () => (requestedDateISO ? evaluateRequestedDeliveryDate(requestedDateISO, pincode, 2) : null),
+    [requestedDateISO, pincode]
+  );
 
   const handleInlineAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,6 +259,8 @@ export default function CheckoutPage() {
         })),
         giftMessage,
         addGiftCardUpsell: false,
+        requestedDeliveryDate: deliverySchedule?.formattedRequestedDate || '',
+        estimatedDeliveryWindow: deliverySchedule?.estimatedDeliveryWindow || '',
         paymentMethod,
       };
 
@@ -454,6 +557,191 @@ export default function CheckoutPage() {
                   )}
                 </div>
               </div>
+
+              {/* When Do You Need Your Order? (Date, Day & Month Selector + Dynamic Estimated Delivery) */}
+              <div className="mt-6 pt-6 border-t border-brand-border space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-serif uppercase tracking-widest text-xs font-semibold text-brand-charcoal flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-brand-gold" />
+                      <span>When Do You Need Your Order? (Date, Day & Month)</span>
+                    </h3>
+                    <p className="text-[11px] text-brand-muted mt-0.5">
+                      Choose your target occasion date to schedule handcrafting & see your estimated delivery window.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick Timeline Presets */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: 'Earliest Possible', days: 4 },
+                    { label: 'In 5 Days', days: 5 },
+                    { label: 'In 1 Week', days: 7 },
+                    { label: 'In 2 Weeks', days: 14 },
+                  ].map((preset) => {
+                    const presetISO = todayDate
+                      ? toLocalISODate(addDaysToLocalDate(todayDate, preset.days))
+                      : '';
+                    const isActive = presetISO !== '' && requestedDateISO === presetISO;
+                    return (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => handleQuickPresetDays(preset.days)}
+                        className={`px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider border transition-colors ${
+                          isActive
+                            ? 'bg-brand-charcoal text-white border-brand-charcoal'
+                            : 'bg-brand-surface text-brand-charcoal border-brand-border hover:border-brand-gold'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Explicit Month, Date (with Day) & Calendar Pickers */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label
+                      htmlFor="needed-month-select"
+                      className="block text-[11px] font-semibold uppercase tracking-wider text-brand-charcoal mb-1"
+                    >
+                      Month & Year *
+                    </label>
+                    <select
+                      id="needed-month-select"
+                      value={
+                        parsedSelected
+                          ? `${parsedSelected.year}-${String(parsedSelected.month).padStart(2, '0')}`
+                          : ''
+                      }
+                      onChange={(e) => handleMonthSelect(e.target.value)}
+                      className="w-full text-xs border-brand-border focus:border-brand-gold focus:ring-brand-gold"
+                    >
+                      {monthOptions.map((mOpt) => (
+                        <option key={mOpt.value} value={mOpt.value}>
+                          {mOpt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="needed-day-select"
+                      className="block text-[11px] font-semibold uppercase tracking-wider text-brand-charcoal mb-1"
+                    >
+                      Date & Day *
+                    </label>
+                    <select
+                      id="needed-day-select"
+                      value={parsedSelected ? String(parsedSelected.day) : ''}
+                      onChange={(e) => handleDaySelect(e.target.value)}
+                      className="w-full text-xs border-brand-border focus:border-brand-gold focus:ring-brand-gold"
+                    >
+                      {dayOptions.map((dOpt) => (
+                        <option key={dOpt.day} value={dOpt.day} disabled={dOpt.disabled}>
+                          {dOpt.day} ({dOpt.weekdayShort}){dOpt.disabled ? ' — Past' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="needed-calendar-input"
+                      className="block text-[11px] font-semibold uppercase tracking-wider text-brand-charcoal mb-1"
+                    >
+                      Or Pick On Calendar
+                    </label>
+                    <input
+                      id="needed-calendar-input"
+                      type="date"
+                      required
+                      min={tomorrowISO}
+                      value={requestedDateISO}
+                      onChange={(e) => setRequestedDateISO(e.target.value)}
+                      className="w-full text-xs border-brand-border focus:border-brand-gold focus:ring-brand-gold"
+                    />
+                  </div>
+                </div>
+
+                {/* Selected Date, Day & Month Pill Summary + Dynamic Estimated Delivery Banner */}
+                {deliverySchedule && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-2 bg-brand-surface border border-brand-border p-3 text-center">
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-widest text-brand-muted">
+                          Day
+                        </span>
+                        <span className="text-xs sm:text-sm font-semibold text-brand-charcoal">
+                          {deliverySchedule.dayName}
+                        </span>
+                      </div>
+                      <div className="border-x border-brand-border">
+                        <span className="block text-[10px] uppercase tracking-widest text-brand-muted">
+                          Date
+                        </span>
+                        <span className="text-xs sm:text-sm font-bold text-brand-crimson">
+                          {deliverySchedule.dayOfMonth}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-widest text-brand-muted">
+                          Month
+                        </span>
+                        <span className="text-xs sm:text-sm font-semibold text-brand-charcoal">
+                          {deliverySchedule.monthName} {deliverySchedule.year}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`p-4 border space-y-2 ${
+                        deliverySchedule.status === 'ON_TIME'
+                          ? 'bg-emerald-50/70 border-emerald-200'
+                          : deliverySchedule.status === 'PRIORITY_RUSH'
+                          ? 'bg-amber-50/80 border-amber-200'
+                          : 'bg-brand-blush border-brand-crimson/30'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 ${
+                            deliverySchedule.status === 'ON_TIME'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : deliverySchedule.status === 'PRIORITY_RUSH'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-brand-crimson text-white'
+                          }`}
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>{deliverySchedule.statusLabel}</span>
+                        </span>
+                        <span className="text-[11px] text-brand-muted flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-brand-gold" />
+                          <span>{deliverySchedule.zoneLabel}</span>
+                        </span>
+                      </div>
+
+                      <div className="text-xs">
+                        <p className="text-[11px] uppercase tracking-wider text-brand-muted font-medium">
+                          Estimated Delivery Window
+                        </p>
+                        <p className="text-sm sm:text-base font-bold text-brand-charcoal mt-0.5">
+                          {deliverySchedule.estimatedDeliveryWindow}
+                        </p>
+                      </div>
+
+                      <p className="text-xs text-brand-muted leading-relaxed">
+                        {deliverySchedule.message}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* STEP 3: Payment Mode (COD + Mock Online / Razorpay Ready) */}
@@ -608,6 +896,38 @@ export default function CheckoutPage() {
                 className="w-full text-xs border-brand-border bg-brand-surface focus:border-brand-gold focus:ring-brand-gold"
               />
             </div>
+
+            {/* Delivery Schedule Summary */}
+            {deliverySchedule && (
+              <div className="pt-3 border-t border-brand-border space-y-2 text-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-brand-muted flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-brand-gold shrink-0" />
+                    <span>Needed By (Day, Date, Month)</span>
+                  </span>
+                  <span className="text-brand-charcoal font-semibold text-right">
+                    {deliverySchedule.formattedRequestedDate}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-brand-muted flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5 text-brand-gold shrink-0" />
+                    <span>Estimated Delivery</span>
+                  </span>
+                  <span
+                    className={`font-semibold text-right ${
+                      deliverySchedule.status === 'ON_TIME'
+                        ? 'text-emerald-700'
+                        : deliverySchedule.status === 'PRIORITY_RUSH'
+                        ? 'text-amber-700'
+                        : 'text-brand-crimson'
+                    }`}
+                  >
+                    {deliverySchedule.estimatedDeliveryWindow}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Totals Breakdown */}
             <div className="pt-3 border-t border-brand-border space-y-2 text-xs">

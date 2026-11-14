@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Package, ArrowRight, LogOut, LayoutDashboard } from 'lucide-react';
+import { Package, ArrowRight, LogOut, LayoutDashboard, Calendar } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { apiRequest } from '@/lib/api';
 import { formatINR } from '@/lib/format';
@@ -125,6 +125,21 @@ export default function AccountPage() {
                   <p className="text-xs text-brand-muted">
                     {order.items.map((i) => `${i.title} (×${i.quantity})`).join(', ')}
                   </p>
+                  {(order.requestedDeliveryDate || order.estimatedDeliveryWindow) && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+                      {order.requestedDeliveryDate && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-surface border border-brand-border text-brand-charcoal">
+                          <Calendar className="w-3 h-3 text-brand-gold" />
+                          <span>Needed: {order.requestedDeliveryDate}</span>
+                        </span>
+                      )}
+                      {order.estimatedDeliveryWindow && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-800 font-medium">
+                          <span>Est. Delivery: {order.estimatedDeliveryWindow}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between md:justify-end gap-5">

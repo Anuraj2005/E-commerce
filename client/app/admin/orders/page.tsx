@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { ArrowRight, Sparkles, Image as ImageIcon, Truck, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Sparkles, Image as ImageIcon, Truck, CheckCircle2, Calendar } from 'lucide-react';
 import { FulfillmentStatus, Order } from '@/types';
 import { apiRequest } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
@@ -176,6 +176,23 @@ export default function AdminOrdersKanbanPage() {
                               {order.paymentMethod})
                             </p>
                           </div>
+
+                          {/* Customer Target Date & Estimated Delivery */}
+                          {(order.requestedDeliveryDate || order.estimatedDeliveryWindow) && (
+                            <div className="p-2 bg-brand-blush/80 border border-brand-gold/40 text-[10px] space-y-0.5">
+                              {order.requestedDeliveryDate && (
+                                <p className="font-semibold text-brand-charcoal flex items-center gap-1">
+                                  <Calendar className="w-3 h-3 text-brand-crimson shrink-0" />
+                                  <span>Needed: {order.requestedDeliveryDate}</span>
+                                </p>
+                              )}
+                              {order.estimatedDeliveryWindow && (
+                                <p className="text-emerald-800 font-medium">
+                                  Est. Delivery: {order.estimatedDeliveryWindow}
+                                </p>
+                              )}
+                            </div>
+                          )}
 
                           {/* Craft Items & Customizations */}
                           <div className="space-y-2 pt-2 border-t border-brand-border">

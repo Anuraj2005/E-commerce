@@ -22,6 +22,8 @@ exports.createOrder = async (req, res, next) => {
       giftMessage = '',
       addGiftCardUpsell = false,
       couponCode = '',
+      requestedDeliveryDate = '',
+      estimatedDeliveryWindow = '',
       paymentMethod = 'COD',
     } = req.body;
 
@@ -149,6 +151,8 @@ exports.createOrder = async (req, res, next) => {
         giftMessage: String(giftMessage || '').trim(),
         addGiftCardUpsell: Boolean(addGiftCardUpsell),
         couponCode: discount > 0 ? normalizedCoupon : null,
+        requestedDeliveryDate: String(requestedDeliveryDate || '').trim(),
+        estimatedDeliveryWindow: String(estimatedDeliveryWindow || '').trim(),
         pricing: {
           subtotal,
           shippingFee,
@@ -274,6 +278,8 @@ exports.createOrder = async (req, res, next) => {
       giftMessage: String(giftMessage || '').trim(),
       addGiftCardUpsell: Boolean(addGiftCardUpsell),
       couponCode: discount > 0 ? normalizedCoupon : null,
+      requestedDeliveryDate: String(requestedDeliveryDate || '').trim(),
+      estimatedDeliveryWindow: String(estimatedDeliveryWindow || '').trim(),
       pricing: {
         subtotal,
         shippingFee,
